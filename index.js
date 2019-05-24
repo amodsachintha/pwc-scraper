@@ -7,8 +7,8 @@ const baseURL = 'http://www.hitad.lk/EN';
 const propertyURL = '/property?page=';
 
 const getAds = (page) => {
-    rp(baseURL + propertyURL + page).then((html) => {
-        let map = $('ul.cat-ads.topseelerimg', html).map((i, e) => {
+    return rp(baseURL + propertyURL + page).then((html) => {
+        return $('ul.cat-ads.topseelerimg', html).map((i, e) => {
             let thumb_url = $('img.img-responsive', e).prop('src');
             let url = $('div.col-lg-12.clearfix', e).children('a').prop('href');
             let title = $('div.col-lg-12.clearfix', e).children('a').children('h4').text();
@@ -23,27 +23,44 @@ const getAds = (page) => {
                 price
             };
         }).get();
-        console.log('Request ' + page + ' Complete! Writing data disk.');
-        saveAsJSON(map, page);
-        console.log('Page ' + page + ' done');
     }).catch(e => {
-        console.log(e);
+        console.log("-----------Error-----------");
     })
 };
 
-const saveAsJSON = (data, i) => {
-    fs.writeFile("./out/json_" + i + ".json", JSON.stringify(data), (err) => {
+const saveAsJSON = (data) => {
+    fs.writeFile("./all.json", JSON.stringify(data), (err) => {
         if (err) {
             console.error(err);
         }
     });
 };
 
-function saveAsCSV(data, i) {
+const saveAsCSV = (data, i) => {
     const transformed = new otcsv(data);
     transformed.toDisk('./out/out_' + i + '.csv');
-}
+};
 
-for (let i = 1; i < 10; i++) {
-    getAds(i);
+
+let arr = [];
+let asyncsLeft = 0;
+for (let i = 1; i <= 1000; i++) {
+    asyncsLeft++;
+    console.log('Requesting page ' + i);
+    getAds(i).then((data) => {
+        console.log('Got page ' + i);
+        arr.push(...data);
+        if (--asyncsLeft === 0) {
+            console.log(arr.length);
+            saveAsJSON(arr);
+            console.log('Done!')
+        }
+    }).catch(e => {
+        console.log('Error____');
+        if (--asyncsLeft === 0) {
+            console.log(arr.length);
+            saveAsJSON(arr);
+            console.log('Done!')
+        }
+    });
 }
